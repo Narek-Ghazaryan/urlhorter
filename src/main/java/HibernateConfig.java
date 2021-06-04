@@ -16,6 +16,8 @@ public final class HibernateConfig {
     public static void main(final String[] args) throws Exception {
         Javalin app = Javalin.create().start(9000);
 
+        final String[] url = new String[1];
+
         Stream<String> lines = Files.lines(Paths.get(String.valueOf(new File("index.html"))));
         String content = lines.collect(Collectors.joining(System.lineSeparator()));
 
@@ -30,27 +32,28 @@ public final class HibernateConfig {
                 new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
         SessionFactory factory = configuration.buildSessionFactory(builder.build());
         Session session = factory.openSession();
-        Transaction transaction = session.beginTransaction();
 
         app.post("/", context -> {
+           Transaction transaction = session.beginTransaction();
             String shortUrl = "http://localhost:9000/"+generate();
-            String url = context.formParam("url");
+            url[0] = context.formParam("url");
 
-            Url url1 = new Url(url,shortUrl);
+            Url url1 = new Url(url[0],shortUrl);
             session.save(url1);
             context
                     .contentType("text/html")
                     .result((content).replaceAll("Shorten your link", shortUrl));
 
-            app.get("/:shortUrl", ctx -> {
-                ctx.redirect(url);
-            });
 
             transaction.commit();
-            session.close();
-
-
         });
+
+        app.get("/:shortUrl", ctx -> {
+            ctx.redirect(url[0]);
+        });
+
+
+
 
 
     }
